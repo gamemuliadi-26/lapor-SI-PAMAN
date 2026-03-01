@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SI-PAMAN | Laporan Taman</title>
+    <style>
+        :root { --primary: #2e7d32; --secondary: #4caf50; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f1f8e9; margin: 0; padding: 20px; }
+        .container { max-width: 500px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: auto; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header img { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; }
+        h2 { color: var(--primary); margin: 10px 0; }
+        label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
+        select, input, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; margin-top: 20px; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        button:hover { background: var(--secondary); }
+        #status { text-align: center; margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?q=80&w=200&auto=format&fit=crop" alt="Icon Tanaman">
+        <h2>SI-PAMAN</h2>
+        <p>Sistem Informasi Pantauan Taman</p>
+    </div>
+
+    <form id="reportForm">
+        <label>Nama Petugas</label>
+        <select id="petugas" required>
+            <option value="">-- Pilih Nama --</option>
+            <option value="Budi">Budi</option>
+            <option value="Siti">Siti</option>
+            <option value="Agus">Agus</option>
+        </select>
+
+        <label>Lokasi Taman</label>
+        <select id="lokasi" required>
+            <option value="">-- Pilih Lokasi --</option>
+            <option value="Taman Kota A">Taman Kota A</option>
+            <option value="Hutan Pinus B">Hutan Pinus B</option>
+            <option value="Taman Melati">Taman Melati</option>
+        </select>
+
+        <label>Ambil Foto Kerjaan</label>
+        <input type="file" id="foto" accept="image/*" capture="environment" required>
+
+        <label>Catatan Tambahan</label>
+        <textarea id="catatan" rows="3" placeholder="Contoh: Penyiraman selesai, rumput dipangkas..."></textarea>
+
+        <input type="hidden" id="gps">
+        
+        <button type="submit" id="submitBtn">KIRIM LAPORAN</button>
+    </form>
+    <div id="status"></div>
+</div>
+
+<script>
+    // 1. Ambil GPS Otomatis saat halaman dibuka
+    window.onload = function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                document.getElementById('gps').value = position.coords.latitude + "," + position.coords.longitude;
+            });
+        }
+    };
+
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzIMvzX982lcJYA3n_PoPlet1PfvvsPzSppvc28r50eQRbkkF4ioNF879IWqWMK-EF8/exec';
+    const form = document.getElementById('reportForm');
+
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const status = document.getElementById('status');
+        btn.disabled = true;
+        btn.innerText = "Sedang Mengirim...";
+
+        const fileInput = document.getElementById('foto');
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function() {
+            const bytes = reader.result.split(',')[1];
+            const data = {
+                petugas: document.getElementById('petugas').value,
+                lokasi: document.getElementById('lokasi').value,
+                catatan: document.getElementById('catatan').value,
+                gps: document.getElementById('gps').value,
+                bytes: bytes,
+                mimeType: file.type
+            };
+
+            fetch(scriptURL + "?petugas=" + encodeURIComponent(data.petugas) + "&lokasi=" + encodeURIComponent(data.lokasi) + "&catatan=" + encodeURIComponent(data.catatan) + "&gps=" + encodeURIComponent(data.gps), {
+                method: 'POST',
+                body: JSON.stringify({bytes: data.bytes, mimeType: data.mimeType})
+            })
+            .then(response => {
+                status.innerHTML = "✅ Laporan Berhasil Terkirim!";
+                status.style.color = "green";
+                form.reset();
+                btn.disabled = false;
+                btn.innerText = "KIRIM LAPORAN";
+            })
+            .catch(error => {
+                status.innerHTML = "❌ Gagal Mengirim.";
+                status.style.color = "red";
+                btn.disabled = false;
+                btn.innerText = "KIRIM LAPORAN";
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+</script>
+
+</body>
+</html>
